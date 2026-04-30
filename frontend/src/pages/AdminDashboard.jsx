@@ -1,14 +1,50 @@
-import React, { useState } from 'react';
+import {useEffect, useState} from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-    QuestionMarkCircleIcon,
     EllipsisVerticalIcon,
     MagnifyingGlassIcon,
     PencilSquareIcon,
     TrashIcon,
-    ShieldCheckIcon
+    ShieldCheckIcon,
+    XMarkIcon,
+    ClockIcon,
+    CheckBadgeIcon
 } from '@heroicons/react/24/outline';
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ userRole }) => {
+    const navigate = useNavigate();
+
+    const [searchTerm, setSearchTerm] = useState("");
+    const [roleFilter, setRoleFilter] = useState("All");
+    const [historySearch, setHistorySearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isHistoryEditOpen, setIsHistoryEditOpen] = useState(false);
+    const [selectedHistory, setSelectedHistory] = useState(null);
+
+    const [users, setUsers] = useState([
+        { id: 1, name: "Dr. David", role: "Ophthalmologist", lastActive: "2 hours ago" },
+        { id: 2, name: "Elena Lopez", role: "User", lastActive: "5 mins ago" },
+        { id: 3, name: "Marcus King", role: "User", lastActive: "Yesterday" },
+    ]);
+
+    const [historyData, setHistoryData] = useState([
+        { id: 101, patient: "Pantea Tania", result: "Normal (99.2%)", date: "Oct 24, 2023 • 14:22", badgeColor: "bg-green-50 text-green-700 border-green-100", status: true },
+        { id: 102, patient: "Turcu Flavius", result: "Moderate DR (84.1%)", date: "Oct 24, 2023 • 12:05", badgeColor: "bg-red-50 text-red-700 border-red-100", status: false },
+        { id: 103, patient: "Moga Antonia", result: "Mild DR (92.5%)", date: "Oct 23, 2023 • 16:50", badgeColor: "bg-blue-50 text-blue-700 border-blue-100", status: false },
+    ]);
+
+    useEffect(() => {
+        if (userRole !== 'admin') {
+            navigate('/dashboard');
+        }
+    }, [userRole, navigate]);
+
+    if (userRole !== 'admin') {
+        return null;
+    }
     const styles = {
         adlam: { fontFamily: "'ADLaM Display', sans-serif" },
         inter: { fontFamily: "'Inter', sans-serif" },
@@ -16,55 +52,48 @@ const AdminDashboard = () => {
         darkTeal: "#1D3E39",
     };
 
-    const [searchTerm, setSearchTerm] = useState("");
-    const [roleFilter, setRoleFilter] = useState("All");
-    const [historySearch, setHistorySearch] = useState("");
 
-    const allUsers = [
-        { name: "Dr. David", role: "Ophthalmologist", lastActive: "2 hours ago" },
-        { name: "Elena Lopez", role: "User", lastActive: "5 mins ago" },
-        { name: "Marcus King", role: "User", lastActive: "Yesterday" },
-    ];
+    const handleEditClick = (user) => {
+        setSelectedUser({ ...user });
+        setIsEditModalOpen(true);
+    };
 
-    const filteredUsers = allUsers.filter(user =>
+    const handleSaveUser = () => {
+        setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
+        setIsEditModalOpen(false);
+    };
+
+    const handleDeleteUser = (id) => {
+        if (window.confirm("Sigur vrei să ștergi acest utilizator?")) {
+            setUsers(users.filter(u => u.id !== id));
+        }
+    };
+
+    const handleSaveHistory = () => {
+        setHistoryData(historyData.map(h => h.id === selectedHistory.id ? selectedHistory : h));
+        setIsHistoryEditOpen(false);
+    };
+
+    const filteredUsers = users.filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         (roleFilter === "All" || user.role === roleFilter)
     );
 
-    const historyData = [
-        { patient: "Pantea Tania", result: "Normal (99.2%)", date: "Oct 24, 2023 • 14:22", status: "bg-green-50 text-green-700 border-green-100" },
-        { patient: "Turcu Flavius", result: "Moderate DR (84.1%)", date: "Oct 24, 2023 • 12:05", status: "bg-red-50 text-red-700 border-red-100" },
-        { patient: "Moga Antonia", result: "Mild DR (92.5%)", date: "Oct 23, 2023 • 16:50", status: "bg-blue-50 text-blue-700 border-blue-100" },
-    ];
-
-    const filteredHistory = historyData.filter(row =>
-        row.patient.toLowerCase().includes(historySearch.toLowerCase()) ||
-        row.result.toLowerCase().includes(historySearch.toLowerCase()) ||
-        row.date.toLowerCase().includes(historySearch.toLowerCase())
-    );
+    const filteredHistory = historyData.filter(row => {
+        const matchesSearch = row.patient.toLowerCase().includes(historySearch.toLowerCase()) ||
+            row.result.toLowerCase().includes(historySearch.toLowerCase());
+        const matchesStatus = statusFilter === "all" ? true :
+            statusFilter === "reviewed" ? row.status === true : row.status === false;
+        return matchesSearch && matchesStatus;
+    });
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 text-left" style={styles.inter}>
-            {/* Navbar */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100 mb-8">
-                <div className="flex items-center gap-12">
-                    <span className="text-2xl font-bold font-['Manrope']" style={{ color: styles.deepBlue }}>RetinaXAI</span>
-                    <div className="hidden md:flex gap-8 text-sm font-medium text-gray-500">
-                        <a href="#" className="border-b-2 pb-1" style={{ color: styles.deepBlue, borderColor: styles.deepBlue }}>Dashboard</a>
-                        <a href="#" className="hover:text-[#003178]">Upload</a>
-                        <a href="#" className="hover:text-[#003178]">Results</a>
-                        <a href="#" className="hover:text-[#003178]">Profile</a>
-                    </div>
-                </div>
-                <QuestionMarkCircleIcon className="w-6 h-6 text-gray-400 cursor-pointer" />
-            </nav>
-
-            <div className="max-w-7xl px-10 mx-auto">
+            <div className="max-w-7xl px-10 mx-auto pt-10">
                 <h1 className="text-5xl mb-10" style={{ ...styles.adlam, color: styles.deepBlue }}>Admin Dashboard</h1>
 
-                {/* Top Stats */}
                 <div className="grid grid-cols-4 gap-6 mb-8">
-                    {[{ l: "TOTAL USERS", v: "1,284" }, { l: "TOTAL ANALYSES", v: "42,902" }, { l: "AVG FIDELITY", v: "0.89" }, { l: "AVG STABILITY", v: "0.89" }].map((s, i) => (
+                    {[{ l: "TOTAL USERS", v: users.length }, { l: "TOTAL ANALYSES", v: "42,902" }, { l: "AVG FIDELITY", v: "0.89" }, { l: "AVG STABILITY", v: "0.89" }].map((s, i) => (
                         <div key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
                             <p className="text-[10px] font-bold text-gray-400 mb-4 uppercase tracking-widest">{s.l}</p>
                             <p className="text-4xl font-bold text-gray-800">{s.v}</p>
@@ -73,23 +102,6 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-12 gap-6 mb-8">
-                    {/* Analyses Over Time */}
-                    <div className="col-span-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
-                        <h3 className="font-bold text-gray-800 mb-10">Analyses Over Time</h3>
-                        <div className="relative h-64 w-full">
-                            <svg viewBox="0 0 800 200" className="w-full h-48 overflow-visible">
-                                <path d="M0,150 C50,150 80,165 120,165 C180,165 220,90 280,90 C340,90 380,170 450,170 C520,170 560,50 630,50 C700,50 750,130 800,90" fill="none" stroke={styles.deepBlue} strokeWidth="3" />
-                                <circle cx="280" cy="90" r="4" fill={styles.deepBlue} />
-                                <circle cx="630" cy="50" r="4" fill={styles.deepBlue} />
-                            </svg>
-                            {/* Spațiere corectată pentru etichete */}
-                            <div className="flex justify-between mt-10 border-t border-gray-100 pt-4 text-[10px] font-bold text-gray-400 uppercase">
-                                <span>Day 1</span><span>Day 5</span><span>Day 10</span><span>Day 15</span><span>Day 20</span><span>Day 25</span><span>Day 30</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Prediction Distribution */}
                     <div className="col-span-4 bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
                         <h3 className="font-bold text-gray-800 mb-8">Prediction Distribution</h3>
                         <div className="space-y-6">
@@ -99,33 +111,20 @@ const AdminDashboard = () => {
                                         <span className="text-gray-500">{item.l}</span>
                                         <span>{item.v}</span>
                                     </div>
-                                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full" style={{ width: item.v, backgroundColor: item.c }}></div></div>
+                                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className="h-full" style={{ width: item.v, backgroundColor: item.c }}></div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-12 gap-6 mb-8 text-left">
-                    {/* Explainability */}
-                    <div className="col-span-4 bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
-                        <h3 className="font-bold text-gray-800 mb-8">Explainability Metrics</h3>
-                        <div className="relative flex justify-center items-center h-48">
-                            <svg className="w-40 h-40 transform -rotate-90">
-                                <circle cx="80" cy="80" r="70" stroke="#003178" strokeWidth="8" fill="transparent" strokeDasharray="440" strokeDashoffset="35" />
-                                <circle cx="80" cy="80" r="55" stroke="#1D3E39" strokeWidth="8" fill="transparent" strokeDasharray="345" strokeDashoffset="51" />
-                            </svg>
-                            <span className="absolute text-2xl font-bold text-gray-800">88%</span>
-                        </div>
-                    </div>
-
-                    {/* User Management - Filtre si Actiuni Corectate */}
                     <div className="col-span-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
                         <div className="flex flex-col gap-4 mb-8 lg:flex-row lg:justify-between lg:items-center">
                             <h3 className="font-bold text-gray-800">User Management</h3>
                             <div className="flex items-center gap-3">
-                                <div className="relative flex items-center">
-                                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 text-gray-400 z-10" />
+                                <div className="relative">
+                                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                     <input
                                         type="text"
                                         placeholder="Search by name..."
@@ -134,38 +133,44 @@ const AdminDashboard = () => {
                                     />
                                 </div>
                                 <select
-                                    className="text-xs bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 w-36 focus:outline-none"
+                                    className="text-xs bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 w-36 focus:outline-none font-medium"
                                     onChange={(e) => setRoleFilter(e.target.value)}
                                 >
                                     <option value="All">All Roles</option>
                                     <option value="Ophthalmologist">Ophthalmologists</option>
                                     <option value="User">Users</option>
                                 </select>
-                                <button className="text-[10px] font-bold text-blue-700 whitespace-nowrap">
-                                    VIEW ALL →
-                                </button>
                             </div>
                         </div>
+
                         <table className="w-full text-sm">
                             <thead className="text-[10px] uppercase font-black text-gray-400 border-b border-gray-50">
                             <tr>
-                                <th className="py-4 text-left tracking-widest">Name</th>
-                                <th className="py-4 text-left tracking-widest">Role</th>
-                                <th className="py-4 text-right tracking-widest">Actions</th>
+                                <th className="py-4 text-left tracking-widest w-[40%]">Name</th>
+                                <th className="py-4 text-left tracking-widest w-[30%]">Role</th>
+                                <th className="py-4 text-right tracking-widest w-[30%]">Actions</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {filteredUsers.map((user, i) => (
-                                <tr key={i} className="border-b border-gray-50 last:border-0 group">
-                                    <td className="py-5 font-bold text-gray-800">{user.name}</td>
+                            {filteredUsers.map((user) => (
+                                <tr key={user.id} className="border-b border-gray-50 last:border-0 group hover:bg-gray-50/50 transition-colors">
+                                    <td className="py-5 font-bold text-gray-800 truncate">{user.name}</td>
                                     <td className="py-5"><span className="bg-gray-100 px-3 py-1 rounded text-[11px] font-medium text-gray-600">{user.role}</span></td>
                                     <td className="py-5 text-right">
-                                        <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button title="Update User" className="p-1.5 hover:bg-blue-50 rounded text-blue-600"><PencilSquareIcon className="w-4 h-4" /></button>
-                                            <button title="Permissions" className="p-1.5 hover:bg-teal-50 rounded text-teal-600"><ShieldCheckIcon className="w-4 h-4" /></button>
-                                            <button title="Delete" className="p-1.5 hover:bg-red-50 rounded text-red-600"><TrashIcon className="w-4 h-4" /></button>
+                                        <div className="flex justify-end items-center h-8">
+                                            <div className="hidden group-hover:flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                                                <button onClick={() => handleEditClick(user)} className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
+                                                    <PencilSquareIcon className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => alert("Permissions: Full Access")} className="p-1.5 hover:bg-teal-50 rounded-lg text-teal-600 transition-colors">
+                                                    <ShieldCheckIcon className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleDeleteUser(user.id)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <EllipsisVerticalIcon className="w-5 h-5 text-gray-300 group-hover:hidden" />
                                         </div>
-                                        <EllipsisVerticalIcon className="w-5 h-5 inline text-gray-400 group-hover:hidden" />
                                     </td>
                                 </tr>
                             ))}
@@ -174,13 +179,12 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Recent History Table - Date din imagine */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden">
-                    <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden mb-8">
+                    <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
                         <h3 className="font-bold text-gray-800">Recent Analysis History</h3>
-                        <div className="flex items-center gap-4">
-                            <div className="relative flex items-center">
-                                <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 text-gray-400" />
+                        <div className="flex gap-3">
+                            <div className="relative">
+                                <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="Search records..."
@@ -189,32 +193,115 @@ const AdminDashboard = () => {
                                     onChange={(e) => setHistorySearch(e.target.value)}
                                 />
                             </div>
-                            <button className="text-xs font-bold text-blue-700">View all reports</button>
+                            <select
+                                className="text-xs bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 w-36 focus:outline-none font-medium"
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                            >
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="reviewed">Reviewed</option>
+                            </select>
                         </div>
                     </div>
-                    <table className="w-full text-sm">
+
+                    <table className="w-full table-fixed text-sm">
                         <thead className="bg-gray-50/50 text-[10px] uppercase font-black text-gray-400">
                         <tr>
-                            <th className="px-8 py-4 text-left">Image</th>
-                            <th className="px-8 py-4 text-left">Patient</th>
-                            <th className="px-8 py-4 text-left">Result</th>
-                            <th className="px-8 py-4 text-left">Date</th>
-                            <th className="px-8 py-4 text-right tracking-widest">Actions</th>
+                            <th className="px-8 py-4 text-left w-[10%]">Image</th>
+                            <th className="px-8 py-4 text-left w-[25%]">Patient</th>
+                            <th className="px-8 py-4 text-left w-[25%]">Result</th>
+                            <th className="px-8 py-4 text-left w-[15%]">Status</th>
+                            <th className="px-8 py-4 text-left w-[20%]">Date</th>
+                            <th className="px-8 py-4 text-right w-[10%]">Actions</th>
                         </tr>
                         </thead>
-                        <tbody>
-                        {filteredHistory.map((row, i) => (
-                            <tr key={i} className="border-b border-gray-50 last:border-0">
-                                <td className="px-8 py-5"><div className="w-10 h-10 bg-black rounded-lg shadow-inner flex items-center justify-center"><div className="w-5 h-5 border border-blue-900/30 rounded-full"></div></div></td>
-                                <td className="px-8 py-5 font-bold text-gray-800">{row.patient}</td>
-                                <td className="px-8 py-5"><span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${row.status}`}>{row.result}</span></td>
-                                <td className="px-8 py-5 text-gray-500 font-medium">{row.date}</td>
-                                <td className="px-8 py-5 text-right"><EllipsisVerticalIcon className="w-5 h-5 inline text-gray-400" /></td>
+                        <tbody className="divide-y divide-gray-50">
+                        {filteredHistory.map((row) => (
+                            <tr key={row.id} className="group hover:bg-gray-50/50 transition-colors">
+                                <td className="px-8 py-5"><div className="w-10 h-10 bg-black rounded-lg"></div></td>
+                                <td className="px-8 py-5 font-bold text-gray-800 truncate">{row.patient}</td>
+                                <td className="px-8 py-5">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${row.badgeColor}`}>{row.result}</span>
+                                </td>
+                                <td className="px-8 py-5">
+                                    {row.status ? (
+                                        <div className="flex items-center gap-1.5 text-teal-600 font-bold text-[10px] uppercase"><CheckBadgeIcon className="w-4 h-4" /> Reviewed</div>
+                                    ) : (
+                                        <div className="flex items-center gap-1.5 text-amber-500 font-bold text-[10px] uppercase"><ClockIcon className="w-4 h-4" /> Pending</div>
+                                    )}
+                                </td>
+                                <td className="px-8 py-5 text-gray-400 text-xs font-medium">{row.date}</td>
+                                <td className="px-8 py-5 text-right">
+                                    <div className="flex justify-end items-center h-8">
+                                        <div className="hidden group-hover:flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                                            <button onClick={() => navigate('/results')} className="text-[10px] font-bold text-blue-600 px-2 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100">VIEW</button>
+                                            <button onClick={() => {setSelectedHistory({...row}); setIsHistoryEditOpen(true);}} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"><PencilSquareIcon className="w-4 h-4" /></button>
+                                            <button onClick={() => setHistoryData(historyData.filter(h => h.id !== row.id))} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 hover:text-red-600"><TrashIcon className="w-4 h-4" /></button>
+                                        </div>
+                                        <EllipsisVerticalIcon className="w-5 h-5 text-gray-300 group-hover:hidden" />
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                         </tbody>
                     </table>
                 </div>
+
+                {isEditModalOpen && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in duration-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold" style={{ color: styles.deepBlue }}>Update User</h2>
+                                <button onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full"><XMarkIcon className="w-5 h-5 text-gray-400" /></button>
+                            </div>
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Full Name</label>
+                                    <input className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none text-sm font-medium" value={selectedUser?.name} onChange={(e) => setSelectedUser({...selectedUser, name: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">System Role</label>
+                                    <select className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none text-sm font-medium" value={selectedUser?.role} onChange={(e) => setSelectedUser({...selectedUser, role: e.target.value})}>
+                                        <option value="Ophthalmologist">Ophthalmologist</option>
+                                        <option value="User">User</option>
+                                    </select>
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button onClick={() => setIsEditModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl bg-gray-50 text-gray-500 font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-colors">Cancel</button>
+                                    <button onClick={handleSaveUser} className="flex-1 px-4 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:brightness-110 transition-all" style={{ backgroundColor: styles.deepBlue }}>Save Changes</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {isHistoryEditOpen && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in duration-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold" style={{ color: styles.deepBlue }}>Update Record</h2>
+                                <button onClick={() => setIsHistoryEditOpen(false)} className="p-1 hover:bg-gray-100 rounded-full"><XMarkIcon className="w-5 h-5 text-gray-400" /></button>
+                            </div>
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Patient Name</label>
+                                    <input className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none text-sm font-medium" value={selectedHistory?.patient} onChange={(e) => setSelectedHistory({...selectedHistory, patient: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Status</label>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setSelectedHistory({...selectedHistory, status: false})} className={`flex-1 py-2 rounded-xl text-[10px] font-bold uppercase border transition-all ${!selectedHistory?.status ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white border-gray-100 text-gray-400'}`}>Pending</button>
+                                        <button onClick={() => setSelectedHistory({...selectedHistory, status: true})} className={`flex-1 py-2 rounded-xl text-[10px] font-bold uppercase border transition-all ${selectedHistory?.status ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-white border-gray-100 text-gray-400'}`}>Reviewed</button>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button onClick={() => setIsHistoryEditOpen(false)} className="flex-1 px-4 py-3 rounded-xl bg-gray-50 text-gray-500 font-bold text-xs uppercase hover:bg-gray-100 transition-colors">Cancel</button>
+                                    <button onClick={handleSaveHistory} className="flex-1 px-4 py-3 rounded-xl text-white font-bold text-xs uppercase shadow-lg shadow-blue-900/20 hover:brightness-110 transition-all" style={{ backgroundColor: styles.deepBlue }}>Update</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

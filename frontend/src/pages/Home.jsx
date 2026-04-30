@@ -2,6 +2,10 @@
 import { useNavigate } from 'react-router-dom';
 const RetinaXAIHome = () => {
     const navigate = useNavigate();
+    const handleGetStarted = (e) => {
+        e.preventDefault();
+        navigate('/login');
+    };
     return (
         <div className="min-h-screen bg-white font-['Inter',_sans-serif]">
             <nav className="flex justify-between items-center px-12 py-8">
@@ -25,7 +29,7 @@ const RetinaXAIHome = () => {
                         Upload retinal images and receive explainable AI predictions with visual insights.
                     </p>
 
-                    <button className="bg-[#003178] text-white px-10 py-3 rounded-lg text-lg font-semibold hover:bg-[#00265d] transition shadow-md">
+                    <button onClick={handleGetStarted} className="bg-[#003178] text-white px-10 py-3 rounded-lg text-lg font-semibold hover:bg-[#00265d] transition shadow-md">
                         Get Started
                     </button>
                 </div>

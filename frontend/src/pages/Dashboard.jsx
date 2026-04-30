@@ -1,7 +1,19 @@
-import React from 'react';
-import { QuestionMarkCircleIcon, EllipsisVerticalIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    QuestionMarkCircleIcon,
+    EllipsisVerticalIcon,
+    MagnifyingGlassIcon,
+    PencilSquareIcon,
+    XMarkIcon,
+    ClockIcon,
+    CheckBadgeIcon,
+    FunnelIcon
+} from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
+    const navigate = useNavigate();
+
     const styles = {
         adlam: { fontFamily: "'ADLaM Display', sans-serif" },
         inter: { fontFamily: "'Inter', sans-serif" },
@@ -10,7 +22,18 @@ const Dashboard = () => {
         subtleGray: "#6B7280"
     };
 
-    // Date pentru Bar Chart (Valori marite pentru vizibilitate)
+    const [recentHistory, setRecentHistory] = useState([
+        { id: 1, patient: "Pantea Tania", result: "Normal (99.2%)", date: "Oct 24, 2023 • 14:22", badgeColor: "bg-green-50 text-green-700 border-green-100", status: true },
+        { id: 2, patient: "Turcu Flavius", result: "Moderate DR (84.1%)", date: "Oct 24, 2023 • 12:05", badgeColor: "bg-red-50 text-red-700 border-red-100", status: false },
+        { id: 3, patient: "Moga Antonia", result: "Mild DR (92.5%)", date: "Oct 23, 2023 • 16:50", badgeColor: "bg-blue-50 text-blue-700 border-blue-100", status: false },
+    ]);
+
+    const [historySearch, setHistorySearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all"); // "all", "pending", "reviewed"
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedRecord, setSelectedRecord] = useState(null);
+
     const drDistribution = [
         { label: "NORMAL", color: "#1D3E39", height: 245 },
         { label: "MILD", color: "#253D88", height: 160 },
@@ -19,38 +42,38 @@ const Dashboard = () => {
         { label: "PROLIF.", color: "#5E626D", height: 45 },
     ];
 
-    const recentHistory = [
-        { patient: "Pantea Tania", result: "Normal (99.2%)", date: "Oct 24, 2023 • 14:22", badgeColor: "bg-green-50 text-green-700 border-green-100" },
-        { patient: "Turcu Flavius", result: "Moderate DR (84.1%)", date: "Oct 24, 2023 • 12:05", badgeColor: "bg-red-50 text-red-700 border-red-100" },
-        { patient: "Moga Antonia", result: "Mild DR (92.5%)", date: "Oct 23, 2023 • 16:50", badgeColor: "bg-blue-50 text-blue-700 border-blue-100" },
-    ];
+    const handleEditClick = (record) => {
+        setSelectedRecord({ ...record });
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEdit = () => {
+        setRecentHistory(recentHistory.map(item =>
+            item.id === selectedRecord.id ? selectedRecord : item
+        ));
+        setIsEditModalOpen(false);
+    };
+
+    const filteredHistory = recentHistory.filter(row => {
+        const matchesName = row.patient.toLowerCase().includes(historySearch.toLowerCase());
+        const matchesStatus =
+            statusFilter === "all" ? true :
+                statusFilter === "reviewed" ? row.status === true :
+                    row.status === false;
+
+        return matchesName && matchesStatus;
+    });
 
     return (
         <div className="min-h-screen bg-gray-50 text-left pb-20" style={styles.inter}>
-
-            {/* Navbar Identic */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100 w-full mb-8">
-                <div className="flex items-center gap-12">
-                    <span className="text-2xl font-bold font-['Manrope']" style={{ color: styles.deepBlue }}>RetinaXAI</span>
-                    <div className="hidden md:flex gap-8 text-sm font-medium text-gray-500">
-                        <a href="#" className="border-b-2 pb-1" style={{ color: styles.deepBlue, borderColor: styles.deepBlue }}>Dashboard</a>
-                        <a href="#" className="hover:text-[#003178]">Upload</a>
-                        <a href="#" className="hover:text-[#003178]">Results</a>
-                        <a href="#" className="hover:text-[#003178]">Profile</a>
-                    </div>
-                </div>
-                <QuestionMarkCircleIcon className="w-6 h-6 text-gray-400 cursor-pointer" />
-            </nav>
-
-            <div className="max-w-7xl px-10 mx-auto">
+            <div className="max-w-7xl px-10 mx-auto pt-10">
                 <div className="mb-10">
-                    <h1 className="text-4xl font-bold mb-2 text-gray-900">Dashboard</h1>
+                    <h1 className="text-4xl font-bold mb-2" style={{color: styles.deepBlue, fontFamily: "'ADLaM Display', sans-serif"}}>Dashboard</h1>
                     <p className="text-gray-500 max-w-lg">
                         Visualizing retinal diagnostic performance and system health metrics.
                     </p>
                 </div>
 
-                {/* Top Stats - mb-8 adaugat */}
                 <div className="grid grid-cols-3 gap-6 mb-8">
                     {[
                         { label: "Total images analyzed", value: "12,482" },
@@ -64,10 +87,7 @@ const Dashboard = () => {
                     ))}
                 </div>
 
-                {/* Graficele Aliniate: Stanga (Bar) | Dreapta (Donut) - mb-8 adaugat */}
                 <div className="grid grid-cols-12 gap-6 mb-8">
-
-                    {/* Graficul din STANGA - Severity Distribution */}
                     <div className="col-span-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
                         <div className="flex justify-between items-center mb-12">
                             <h3 className="font-bold text-gray-800 text-lg">DR severity distribution</h3>
@@ -80,45 +100,30 @@ const Dashboard = () => {
                                 ))}
                             </div>
                         </div>
-
                         <div className="h-72 flex items-end justify-between px-6">
                             {drDistribution.map((bar, i) => (
                                 <div key={i} className="flex flex-col items-center w-full">
-                                    {/* Bara principala - Inaltime marita */}
-                                    <div
-                                        className="w-12 rounded-t-sm"
-                                        style={{ height: bar.height, backgroundColor: bar.color }}
-                                    ></div>
-                                    {/* Linia de demarcatie */}
+                                    <div className="w-12 rounded-t-sm" style={{ height: bar.height, backgroundColor: bar.color }}></div>
                                     <div className="w-14 h-[1px] bg-gray-100"></div>
-                                    
                                     <span className="text-[10px] font-bold text-gray-400 mt-6 tracking-tighter">{bar.label}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Graficul din DREAPTA - 92% Prediction Distribution */}
                     <div className="col-span-4 bg-white p-8 rounded-2xl shadow-sm border border-gray-50 flex flex-col justify-between">
                         <h3 className="font-bold text-gray-800 text-lg">Predictions distribution</h3>
                         <div className="relative flex justify-center items-center py-4">
                             <svg className="w-44 h-44 transform -rotate-90">
                                 <circle cx="88" cy="88" r="75" stroke="#F3F4F6" strokeWidth="18" fill="transparent" />
-                                <circle
-                                    cx="88" cy="88" r="75" stroke="#253D88" strokeWidth="18" fill="transparent"
-                                    strokeDasharray="471" strokeDashoffset={471 * (1 - 0.92)}
-                                />
-                                <circle
-                                    cx="88" cy="88" r="75" stroke="#1D3E39" strokeWidth="18" fill="transparent"
-                                    strokeDasharray="471" strokeDashoffset={471 * (1 - 0.78)}
-                                    strokeLinecap="round"
-                                />
+                                <circle cx="88" cy="88" r="75" stroke="#253D88" strokeWidth="18" fill="transparent" strokeDasharray="471" strokeDashoffset={471 * (1 - 0.92)} />
+                                <circle cx="88" cy="88" r="75" stroke="#1D3E39" strokeWidth="18" fill="transparent" strokeDasharray="471" strokeDashoffset={471 * (1 - 0.78)} strokeLinecap="round" />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <span className="text-3xl font-bold text-gray-800">92%</span>
                             </div>
                         </div>
-                        <div className="space-y-3">
+                        <div className="space-y-3 text-left">
                             <div className="flex justify-between text-[11px] font-bold">
                                 <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#1D3E39]"></div> <span className="text-gray-600">High Confidence</span></div>
                                 <span>78%</span>
@@ -135,40 +140,159 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Tabelul de Istoric - mb-8 adaugat */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden mb-8">
-                    <div className="p-6 flex justify-between items-center border-b border-gray-50">
+                    <div className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-50">
                         <h3 className="font-bold text-gray-800 text-lg">Recent Analysis History</h3>
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
+
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="relative flex-1 md:flex-none">
                                 <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input type="text" placeholder="Search records..." className="pl-10 pr-4 py-2 bg-gray-100 rounded-lg text-xs w-64 focus:outline-none" />
+                                <input
+                                    type="text"
+                                    placeholder="Search patient..."
+                                    className="pl-10 pr-4 py-2 bg-gray-100 border border-gray-100 rounded-lg text-xs w-full md:w-48 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                    onChange={(e) => setHistorySearch(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="relative flex-1 md:flex-none">
+                                <FunnelIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <select
+                                    className="pl-9 pr-8 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs w-full md:w-40 focus:ring-1 focus:ring-blue-500 focus:outline-none appearance-none font-medium text-gray-600"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="pending">Pending Review</option>
+                                    <option value="reviewed">Reviewed</option>
+                                </select>
                             </div>
                         </div>
                     </div>
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50/50 text-[10px] uppercase tracking-widest text-gray-400">
+
+                    <table className="w-full text-sm table-fixed">
+                        <thead className="bg-gray-50/50 text-[10px] uppercase tracking-widest text-gray-400 border-b border-gray-100">
                         <tr>
-                            <th className="px-8 py-4 text-left">Image</th>
-                            <th className="px-8 py-4 text-left">Patient</th>
-                            <th className="px-8 py-4 text-left">Result</th>
-                            <th className="px-8 py-4 text-left">Date</th>
-                            <th className="px-8 py-4 text-right">Actions</th>
+                            <th className="px-6 py-4 text-left w-[8%]">Image</th>
+                            <th className="px-6 py-4 text-left w-[25%]">Patient</th>
+                            <th className="px-6 py-4 text-left w-[20%]">Diagnostic</th>
+                            <th className="px-6 py-4 text-left w-[15%]">Status</th>
+                            <th className="px-6 py-4 text-left w-[22%]">Date</th>
+                            <th className="px-6 py-4 text-right w-[10%]">Actions</th>
                         </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
-                        {recentHistory.map((row, i) => (
-                            <tr key={i} className="hover:bg-gray-50/50">
-                                <td className="px-8 py-4"><div className="w-10 h-10 bg-black rounded-lg"></div></td>
-                                <td className="px-8 py-4 font-bold text-gray-800">{row.patient}</td>
-                                <td className="px-8 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${row.badgeColor}`}>{row.result}</span></td>
-                                <td className="px-8 py-4 text-gray-500">{row.date}</td>
-                                <td className="px-8 py-4 text-right"><EllipsisVerticalIcon className="w-5 h-5 inline text-gray-400" /></td>
+                        <tbody className="divide-y divide-gray-50 text-left">
+                        {filteredHistory.length > 0 ? (
+                            filteredHistory.map((row) => (
+                                <tr key={row.id} className="group transition-colors hover:bg-gray-50/60">
+                                    <td className="px-6 py-4">
+                                        <div className="w-10 h-10 bg-black rounded-lg"></div>
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-gray-800 tracking-tight">{row.patient}</td>
+                                    <td className="px-6 py-4">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${row.badgeColor}`}>
+                                                {row.result}
+                                            </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {row.status ? (
+                                            <div className="flex items-center gap-1.5 text-teal-600 font-bold text-[10px] uppercase">
+                                                <CheckBadgeIcon className="w-4 h-4" /> Reviewed
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 text-amber-500 font-bold text-[10px] uppercase">
+                                                <ClockIcon className="w-4 h-4" /> Pending
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 text-gray-400 text-xs font-medium">
+                                        {row.date}
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end items-center h-8">
+                                            <div className="hidden group-hover:flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                                                <button
+                                                    onClick={() => navigate('/results')}
+                                                    className="text-[10px] font-black text-blue-600 px-3 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                                >
+                                                    VIEW
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEditClick(row)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+                                                >
+                                                    <PencilSquareIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="group-hover:hidden">
+                                                <EllipsisVerticalIcon className="w-5 h-5 text-gray-300" />
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="6" className="px-6 py-12 text-center text-gray-400 text-xs italic tracking-wide">
+                                    No analysis records match your search criteria.
+                                </td>
                             </tr>
-                        ))}
+                        )}
                         </tbody>
                     </table>
                 </div>
+
+                {isEditModalOpen && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in duration-200 text-left">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold" style={{ color: styles.deepBlue }}>Update Record</h2>
+                                <button onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                                    <XMarkIcon className="w-5 h-5 text-gray-400" />
+                                </button>
+                            </div>
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Patient Name</label>
+                                    <input
+                                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-100 focus:outline-none font-medium text-sm"
+                                        value={selectedRecord?.patient || ""}
+                                        onChange={(e) => setSelectedRecord({...selectedRecord, patient: e.target.value})}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Medical Review Status</label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setSelectedRecord({...selectedRecord, status: false})}
+                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${!selectedRecord?.status ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white border-gray-100 text-gray-400'}`}
+                                        >
+                                            Pending
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedRecord({...selectedRecord, status: true})}
+                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${selectedRecord?.status ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-white border-gray-100 text-gray-400'}`}
+                                        >
+                                            Reviewed
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-50">
+                                    <button onClick={() => setIsEditModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl bg-gray-50 text-gray-500 font-bold text-xs uppercase tracking-widest transition-colors hover:bg-gray-100">Cancel</button>
+                                    <button
+                                        onClick={handleSaveEdit}
+                                        className="flex-1 px-4 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:brightness-110 transition-all"
+                                        style={{ backgroundColor: styles.deepBlue }}
+                                    >
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

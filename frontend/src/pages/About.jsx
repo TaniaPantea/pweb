@@ -4,7 +4,6 @@ const AboutRetinaXAI = () => {
     const navigate = useNavigate();
     return (
         <div className="min-h-screen bg-white font-['Inter',_sans-serif]">
-            {/* Navbar */}
             <nav className="flex justify-between items-center px-12 py-8">
                 <div className="text-3xl font-extrabold tracking-tight text-[#003178]">
                     RetinaXAI
@@ -29,7 +28,6 @@ const AboutRetinaXAI = () => {
             </nav>
 
             <main className="max-w-6xl mx-auto px-12 pt-16 pb-28 text-left">
-                {/* Header */}
                 <section className="mb-20">
                     <div className="border-l-4 border-[#003178] pl-8">
                         <h1 className="text-5xl font-extrabold text-[#003178] mb-5">
@@ -43,10 +41,7 @@ const AboutRetinaXAI = () => {
                         </p>
                     </div>
                 </section>
-
-                {/* Main Content */}
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-16 mb-20">
-                    {/* Left */}
                     <div className="space-y-7 text-[#003178] text-lg leading-relaxed">
                         <p>
                             The platform was created to explore how artificial
@@ -69,7 +64,6 @@ const AboutRetinaXAI = () => {
                         </p>
                     </div>
 
-                    {/* Right */}
                     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-8 text-left">
                         <h3 className="text-sm uppercase tracking-widest font-bold text-[#003178] opacity-60 mb-6">
                             Technical Overview
@@ -107,7 +101,6 @@ const AboutRetinaXAI = () => {
                     </div>
                 </section>
 
-                {/* Roles */}
                 <section className="mb-20 text-left">
                     <h2 className="text-2xl font-bold text-[#003178] mb-10">
                         Platform Roles
@@ -149,7 +142,6 @@ const AboutRetinaXAI = () => {
                     </div>
                 </section>
 
-                {/* Closing */}
                 <section className="max-w-4xl text-left">
                     <p className="text-lg italic text-[#003178] leading-relaxed">
                         RetinaXAI reflects the growing importance of trustworthy
@@ -160,7 +152,6 @@ const AboutRetinaXAI = () => {
                 </section>
             </main>
 
-            {/* Footer */}
             <footer className="border-t border-slate-100 py-10 px-12">
                 <div className="max-w-7xl mx-auto flex flex-wrap gap-x-10 gap-y-4 text-sm text-left">
                     <div className="flex items-center gap-3 text-[#003178]">

@@ -1,7 +1,8 @@
-import React from 'react';
-import { CloudArrowUpIcon, CheckCircleIcon, XCircleIcon, QuestionMarkCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import {useEffect, useState} from 'react';
+import { CheckCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from "react-router-dom";
 
-const AutomatedDiagnosticReport = () => {
+const AutomatedDiagnosticReport = ({ userRole = "doctor", isReviewed = false }) => {
     const styles = {
         adlam: { fontFamily: "'ADLaM Display', sans-serif" },
         inter: { fontFamily: "'Inter', sans-serif" },
@@ -9,41 +10,30 @@ const AutomatedDiagnosticReport = () => {
         tealGreen: "#003D36",
         subtleGray: "#434652"
     };
+    const today = new Date().toLocaleDateString('en-GB');
     const primaryBlue = "#003178";
+    const navigate = useNavigate();
+
+    const [savedReview, setSavedReview] = useState(null);
+
+    useEffect(() => {
+        const data = localStorage.getItem('last_doctor_review');
+        if (data) {
+            setSavedReview(JSON.parse(data));
+        }
+    }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50 text-left" style={styles.inter}>
-
-            {/* Header Nav */}
-            {/* Navbar Corectat */}
-            <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100 w-full">
-                <div className="flex items-center gap-12">
-                    {/* Logo-ul care lipsea */}
-                    <span className="text-2xl font-bold font-['Manrope']" style={{ color: primaryBlue }}>RetinaXAI</span>
-
-                    <div className="hidden md:flex gap-8 text-sm font-medium text-gray-500">
-                        <a href="#" className="hover:text-[#003178]">Dashboard</a>
-                        <a href="#" className="hover:text-[#003178]">Upload</a>
-                        {/* Schimbăm border-ul pe Results pentru că aici suntem acum */}
-                        <a href="#" className="border-b-2 pb-1" style={{ color: primaryBlue, borderColor: primaryBlue }}>Results</a>
-                        <a href="#" className="hover:text-[#003178]">Profile</a>
-                    </div>
-                </div>
-                <QuestionMarkCircleIcon className="w-6 h-6 text-434652 cursor-pointer" />
-            </nav>
-
+        <div className="min-h-screen bg-gray-50 text-left pb-20" style={styles.inter}>
             <div className="max-w-7xl p-10 mx-auto">
 
-                {/* Top Header Section - Aliniat cu coloanele de mai jos */}
                 <div className="grid grid-cols-12 gap-8 mb-12 items-end">
-                    {/* Titlul ocupa aceeasi latime ca Visual Explanation (8 coloane) */}
                     <div className="col-span-8">
                         <h1 className="text-5xl" style={{ ...styles.adlam, color: styles.deepBlue }}>
                             Automated Diagnostic Report
                         </h1>
                     </div>
 
-                    {/* Cardul de diagnostic ocupa aceeasi latime ca Fidelity Metrics (4 coloane) */}
                     <div className="col-span-4">
                         <div className="bg-white p-6 px-8 rounded-2xl shadow-sm flex items-center justify-between border border-gray-50">
                             <div className="text-left">
@@ -65,7 +55,6 @@ const AutomatedDiagnosticReport = () => {
                 </div>
 
                 <div className="grid grid-cols-12 gap-8">
-                    {/* Main Visual Section (8 coloane) */}
                     <div className="col-span-8 space-y-8">
                         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-50">
                             <h3 className="font-bold text-gray-800 text-lg mb-8 text-left">Visual Explanation</h3>
@@ -85,7 +74,6 @@ const AutomatedDiagnosticReport = () => {
                             </div>
                         </div>
 
-                        {/* Interpretation Card */}
                         <div className="p-10 rounded-3xl shadow-md text-left" style={{ backgroundColor: styles.deepBlue }}>
                             <p className="text-[10px] font-bold uppercase tracking-[0.25em] mb-4 text-blue-200/60">Clinical Interpretation</p>
                             <p className="text-base leading-relaxed text-white font-normal opacity-95">
@@ -96,7 +84,6 @@ const AutomatedDiagnosticReport = () => {
                         </div>
                     </div>
 
-                    {/* Sidebar Section (4 coloane) */}
                     <div className="col-span-4 space-y-8">
                         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-50 text-left">
                             <h3 className="font-bold text-gray-400 text-[10px] uppercase tracking-[0.2em] mb-10">Fidelity Metrics</h3>
@@ -114,14 +101,13 @@ const AutomatedDiagnosticReport = () => {
                                         </div>
                                         <span className="font-bold text-lg pl-4" style={{ color: styles.deepBlue }}>{m.val}</span>
                                     </div>
-                                    <div className="w-full h-1.5 bg-gray-100 rounded-full">
-                                        <div className="h-full rounded-full" style={{ width: `${m.p}%`, backgroundColor: i === 2 ? '#93A8C7' : styles.deepBlue }}></div>
+                                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${m.p}%`, backgroundColor: i === 2 ? '#93A8C7' : styles.deepBlue }}></div>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Bottom AUC Stats */}
                         <div className="bg-gray-100/50 p-8 rounded-3xl border border-gray-100 text-left">
                             <h3 className="font-bold text-gray-400 text-[9px] uppercase tracking-[0.2em] mb-6">Explainability Details</h3>
                             <div className="grid grid-cols-2 gap-4">
@@ -137,8 +123,54 @@ const AutomatedDiagnosticReport = () => {
                         </div>
                     </div>
                 </div>
+
+                {userRole === 'doctor' && !isReviewed && (
+                    <div className="mt-12 flex justify-end">
+                        <button
+                            onClick={() => navigate('/review')}
+                            className="flex items-center gap-3 bg-[#0D47A1] text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-blue-900/20 hover:bg-[#003178] transition-all transform hover:-translate-y-1 active:scale-95"
+                        >
+                            <span>Proceed to Expert Review</span>
+                            <ArrowRightIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
+
             </div>
+            {savedReview && (
+                <div className="bg-white p-8 rounded-3xl shadow-md border-2 border-blue-100 mt-10 text-left animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-blue-50 rounded-lg">
+                            <CheckCircleIcon className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <h3 className="font-bold text-gray-800 text-xl">Doctor's Clinical Validation</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Annotated Scan</p>
+                            <div className="rounded-2xl overflow-hidden bg-black aspect-video border border-gray-100">
+                                <img src={savedReview.annotatedImage} alt="Expert Annotation" className="w-full h-full object-contain" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Clinical Notes</p>
+                            <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-50 min-h-[150px]">
+                                <p className="text-sm text-gray-700 leading-relaxed italic">
+                                    "{savedReview.observations || "No specific observations provided."}"
+                                </p>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold uppercase">
+                                <span>Date: {today}</span>
+                                <span className="text-blue-600 tracking-tighter italic font-black">Electronic Signature: Dr. User</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 };
 
