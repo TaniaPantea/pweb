@@ -16,7 +16,7 @@ import { useState } from "react";
 
 function AppContent() {
     const location = useLocation();
-    const [userRole, setUserRole] = useState('doctor');
+    const [userRole, setUserRole] = useState('admin');
 
     const hideNavbarRoutes = ["/", "/login", "/register", "/about"];
 

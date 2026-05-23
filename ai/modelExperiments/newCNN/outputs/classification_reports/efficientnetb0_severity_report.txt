@@ -1,0 +1,13 @@
+Final Validation Accuracy: 0.8100436681222707
+
+                  precision    recall  f1-score   support
+
+           No DR     0.9665    0.9601    0.9633       451
+            Mild     0.5904    0.5269    0.5568        93
+        Moderate     0.7061    0.8360    0.7656       250
+          Severe     0.4651    0.4167    0.4396        48
+Proliferative DR     0.6739    0.4189    0.5167        74
+
+        accuracy                         0.8100       916
+       macro avg     0.6804    0.6317    0.6484       916
+    weighted avg     0.8073    0.8100    0.8045       916

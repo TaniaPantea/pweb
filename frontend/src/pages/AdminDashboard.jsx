@@ -51,6 +51,12 @@ const AdminDashboard = ({ userRole }) => {
         deepBlue: "#003178",
         darkTeal: "#1D3E39",
     };
+    const distribution = [
+        { l: "No DR", v: 64, c: styles.darkTeal },
+        { l: "Mild", v: 18, c: "#253D88" },
+        { l: "Moderate", v: 10, c: "#4759B3" },
+        { l: "Severe", v: 8, c: "#B33E2D" }
+    ];
 
 
     const handleEditClick = (user) => {
@@ -105,14 +111,18 @@ const AdminDashboard = ({ userRole }) => {
                     <div className="col-span-4 bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
                         <h3 className="font-bold text-gray-800 mb-8">Prediction Distribution</h3>
                         <div className="space-y-6">
-                            {[{ l: "No DR", v: "64%", c: styles.darkTeal }, { l: "Mild", v: "18%", c: "#253D88" }, { l: "Moderate", v: "10%", c: "#4759B3" }, { l: "Severe", v: "8%", c: "#B33E2D" }].map((item, i) => (
+                            {distribution.map((item, i) => (
                                 <div key={i}>
                                     <div className="flex justify-between text-xs font-bold mb-2">
                                         <span className="text-gray-500">{item.l}</span>
-                                        <span>{item.v}</span>
+                                        <span>{item.v}%</span>
                                     </div>
+
                                     <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                        <div className="h-full" style={{ width: item.v, backgroundColor: item.c }}></div>
+                                        <div
+                                            className="h-full"
+                                            style={{ width: `${item.v}%`, backgroundColor: item.c }}
+                                        ></div>
                                     </div>
                                 </div>
                             ))}
