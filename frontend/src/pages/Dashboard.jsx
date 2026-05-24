@@ -1,11 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    QuestionMarkCircleIcon,
     EllipsisVerticalIcon,
     MagnifyingGlassIcon,
-    PencilSquareIcon,
-    XMarkIcon,
     ClockIcon,
     CheckBadgeIcon,
     FunnelIcon
@@ -22,47 +19,115 @@ const Dashboard = () => {
         subtleGray: "#6B7280"
     };
 
-    const [recentHistory, setRecentHistory] = useState([
-        { id: 1, patient: "Pantea Tania", result: "Normal (99.2%)", date: "Oct 24, 2023 • 14:22", badgeColor: "bg-green-50 text-green-700 border-green-100", status: true },
-        { id: 2, patient: "Turcu Flavius", result: "Moderate DR (84.1%)", date: "Oct 24, 2023 • 12:05", badgeColor: "bg-red-50 text-red-700 border-red-100", status: false },
-        { id: 3, patient: "Moga Antonia", result: "Mild DR (92.5%)", date: "Oct 23, 2023 • 16:50", badgeColor: "bg-blue-50 text-blue-700 border-blue-100", status: false },
+    const [recentHistory, setRecentHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [historySearch, setHistorySearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+
+    const [stats, setStats] = useState({
+        totalImages: 0,
+        avgFidelity: 0.82,
+        avgStability: 0.76
+    });
+
+    const [drDistribution, setDrDistribution] = useState([
+        { label: "NORMAL", color: "#1D3E39", count: 0, height: 20 },
+        { label: "MILD", color: "#253D88", count: 0, height: 20 },
+        { label: "MODERATE", color: "#4759B3", count: 0, height: 20 },
+        { label: "SEVERE", color: "#B33E2D", count: 0, height: 20 },
+        { label: "PROLIF.", color: "#5E626D", count: 0, height: 20 },
     ]);
 
-    const [historySearch, setHistorySearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all"); // "all", "pending", "reviewed"
+    const [confidenceDistribution, setConfidenceDistribution] = useState({
+        high: 0,
+        moderate: 0,
+        low: 0
+    });
 
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedRecord, setSelectedRecord] = useState(null);
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/analysis/history');
+                if (!response.ok) throw new Error("Could not load history data.");
+                const data = await response.json();
 
-    const drDistribution = [
-        { label: "NORMAL", color: "#1D3E39", height: 245 },
-        { label: "MILD", color: "#253D88", height: 160 },
-        { label: "MODERATE", color: "#4759B3", height: 190 },
-        { label: "SEVERE", color: "#B33E2D", height: 75 },
-        { label: "PROLIF.", color: "#5E626D", height: 45 },
-    ];
+                setRecentHistory(data);
+                calculateMetrics(data);
+            } catch (error) {
+                console.error("Error connecting to backend history API:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const handleEditClick = (record) => {
-        setSelectedRecord({ ...record });
-        setIsEditModalOpen(true);
+        fetchDashboardData();
+    }, []);
+
+    const calculateMetrics = (dataList) => {
+        const total = dataList.length;
+        if (total === 0) return;
+
+        let severityCounts = { "No DR": 0, "Mild": 0, "Moderate": 0, "Severe": 0, "Proliferative DR": 0 };
+        let confCounts = { high: 0, moderate: 0, low: 0 };
+
+        dataList.forEach(item => {
+            const label = item.predictionLabel || "No DR";
+            if (severityCounts[label] !== undefined) {
+                severityCounts[label]++;
+            }
+
+            const conf = item.confidence || 0;
+            if (conf >= 0.85) confCounts.high++;
+            else if (conf >= 0.50) confCounts.moderate++;
+            else confCounts.low++;
+        });
+
+        const maxCount = Math.max(...Object.values(severityCounts), 1);
+        const updatedDistribution = [
+            { label: "NORMAL", color: "#1D3E39", count: severityCounts["No DR"], height: Math.max((severityCounts["No DR"] / maxCount) * 240, 20) },
+            { label: "MILD", color: "#253D88", count: severityCounts["Mild"], height: Math.max((severityCounts["Mild"] / maxCount) * 240, 20) },
+            { label: "MODERATE", color: "#4759B3", count: severityCounts["Moderate"], height: Math.max((severityCounts["Moderate"] / maxCount) * 240, 20) },
+            { label: "SEVERE", color: "#B33E2D", count: severityCounts["Severe"], height: Math.max((severityCounts["Severe"] / maxCount) * 240, 20) },
+            { label: "PROLIF.", color: "#5E626D", count: severityCounts["Proliferative DR"], height: Math.max((severityCounts["Proliferative DR"] / maxCount) * 240, 20) },
+        ];
+
+        const highPct = Math.round((confCounts.high / total) * 100) || 0;
+        const modPct = Math.round((confCounts.moderate / total) * 100) || 0;
+        const lowPct = 100 - highPct - modPct;
+
+        setStats(prev => ({ ...prev, totalImages: total }));
+        setDrDistribution(updatedDistribution);
+        setConfidenceDistribution({ high: highPct, moderate: modPct, low: lowPct });
     };
 
-    const handleSaveEdit = () => {
-        setRecentHistory(recentHistory.map(item =>
-            item.id === selectedRecord.id ? selectedRecord : item
-        ));
-        setIsEditModalOpen(false);
+    const getBadgeStyle = (label) => {
+        if (label === "No DR" || label === "Normal") return "bg-green-50 text-green-700 border-green-100";
+        if (label === "Mild") return "bg-blue-50 text-blue-700 border-blue-100";
+        if (label === "Moderate") return "bg-amber-50 text-amber-700 border-amber-100";
+        return "bg-red-50 text-red-700 border-red-100";
     };
 
     const filteredHistory = recentHistory.filter(row => {
-        const matchesName = row.patient.toLowerCase().includes(historySearch.toLowerCase());
+        // Permite căutarea direct din input și după numele pacientului sau fișier
+        const currentPatientName = row.patientName || "Anonymous Patient";
+        const matchesSearch = row.imageName.toLowerCase().includes(historySearch.toLowerCase()) ||
+            currentPatientName.toLowerCase().includes(historySearch.toLowerCase());
+
         const matchesStatus =
             statusFilter === "all" ? true :
-                statusFilter === "reviewed" ? row.status === true :
-                    row.status === false;
+                statusFilter === "reviewed" ? row.isReviewed === true :
+                    row.isReviewed === false;
 
-        return matchesName && matchesStatus;
+        return matchesSearch && matchesStatus;
     });
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <p className="text-lg font-semibold" style={{ color: styles.deepBlue }}>Loading statistical system dashboards...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 text-left pb-20" style={styles.inter}>
@@ -74,11 +139,12 @@ const Dashboard = () => {
                     </p>
                 </div>
 
+                {/* Secțiunea de Metrici */}
                 <div className="grid grid-cols-3 gap-6 mb-8">
                     {[
-                        { label: "Total images analyzed", value: "12,482" },
-                        { label: "Average fidelity", value: "0.89" },
-                        { label: "Average stability", value: "0.89" }
+                        { label: "Total images analyzed", value: stats.totalImages.toLocaleString() },
+                        { label: "Average fidelity", value: stats.avgFidelity },
+                        { label: "Average stability", value: stats.avgStability }
                     ].map((stat, i) => (
                         <div key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-50">
                             <p className="text-[10px] font-bold text-gray-400 mb-4 uppercase tracking-widest">{stat.label}</p>
@@ -95,7 +161,7 @@ const Dashboard = () => {
                                 {drDistribution.map((d, i) => (
                                     <div key={i} className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
-                                        <span className="text-[9px] font-bold text-gray-400 uppercase">{d.label}</span>
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase">{d.label} ({d.count})</span>
                                     </div>
                                 ))}
                             </div>
@@ -103,7 +169,7 @@ const Dashboard = () => {
                         <div className="h-72 flex items-end justify-between px-6">
                             {drDistribution.map((bar, i) => (
                                 <div key={i} className="flex flex-col items-center w-full">
-                                    <div className="w-12 rounded-t-sm" style={{ height: bar.height, backgroundColor: bar.color }}></div>
+                                    <div className="w-12 rounded-t-sm transition-all duration-700 ease-out" style={{ height: bar.height, backgroundColor: bar.color }}></div>
                                     <div className="w-14 h-[1px] bg-gray-100"></div>
                                     <span className="text-[10px] font-bold text-gray-400 mt-6 tracking-tighter">{bar.label}</span>
                                 </div>
@@ -116,25 +182,25 @@ const Dashboard = () => {
                         <div className="relative flex justify-center items-center py-4">
                             <svg className="w-44 h-44 transform -rotate-90">
                                 <circle cx="88" cy="88" r="75" stroke="#F3F4F6" strokeWidth="18" fill="transparent" />
-                                <circle cx="88" cy="88" r="75" stroke="#253D88" strokeWidth="18" fill="transparent" strokeDasharray="471" strokeDashoffset={471 * (1 - 0.92)} />
-                                <circle cx="88" cy="88" r="75" stroke="#1D3E39" strokeWidth="18" fill="transparent" strokeDasharray="471" strokeDashoffset={471 * (1 - 0.78)} strokeLinecap="round" />
+                                <circle cx="88" cy="88" r="75" stroke="#253D88" strokeWidth="18" fill="transparent" strokeDasharray="471" strokeDashoffset={471 * (1 - (confidenceDistribution.high + confidenceDistribution.moderate) / 100)} />
+                                <circle cx="88" cy="88" r="75" stroke="#1D3E39" strokeWidth="18" fill="transparent" strokeDasharray="471" strokeDashoffset={471 * (1 - confidenceDistribution.high / 100)} strokeLinecap="round" />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-3xl font-bold text-gray-800">92%</span>
+                                <span className="text-3xl font-bold text-gray-800">{confidenceDistribution.high}%</span>
                             </div>
                         </div>
                         <div className="space-y-3 text-left">
                             <div className="flex justify-between text-[11px] font-bold">
-                                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#1D3E39]"></div> <span className="text-gray-600">High Confidence</span></div>
-                                <span>78%</span>
+                                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#1D3E39]"></div> <span className="text-gray-600">High Confidence (≥85%)</span></div>
+                                <span>{confidenceDistribution.high}%</span>
                             </div>
                             <div className="flex justify-between text-[11px] font-bold">
-                                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#253D88]"></div> <span className="text-gray-600">Moderate</span></div>
-                                <span>14%</span>
+                                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#253D88]"></div> <span className="text-gray-600">Moderate Confidence</span></div>
+                                <span>{confidenceDistribution.moderate}%</span>
                             </div>
                             <div className="flex justify-between text-[11px] font-bold">
                                 <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-gray-200"></div> <span className="text-gray-400">Low/Manual Review</span></div>
-                                <span>8%</span>
+                                <span>{confidenceDistribution.low}%</span>
                             </div>
                         </div>
                     </div>
@@ -149,7 +215,7 @@ const Dashboard = () => {
                                 <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search patient..."
+                                    placeholder="Search name or file..."
                                     className="pl-10 pr-4 py-2 bg-gray-100 border border-gray-100 rounded-lg text-xs w-full md:w-48 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                                     onChange={(e) => setHistorySearch(e.target.value)}
                                 />
@@ -173,55 +239,62 @@ const Dashboard = () => {
                     <table className="w-full text-sm table-fixed">
                         <thead className="bg-gray-50/50 text-[10px] uppercase tracking-widest text-gray-400 border-b border-gray-100">
                         <tr>
-                            <th className="px-6 py-4 text-left w-[8%]">Image</th>
-                            <th className="px-6 py-4 text-left w-[25%]">Patient</th>
-                            <th className="px-6 py-4 text-left w-[20%]">Diagnostic</th>
-                            <th className="px-6 py-4 text-left w-[15%]">Status</th>
-                            <th className="px-6 py-4 text-left w-[22%]">Date</th>
-                            <th className="px-6 py-4 text-right w-[10%]">Actions</th>
+                            <th className="px-6 py-4 text-left w-[10%]">Scan Preview</th>
+                            <th className="px-6 py-4 text-left w-[18%]">Patient Name</th>
+                            <th className="px-6 py-4 text-left w-[20%]">File Target Name</th>
+                            <th className="px-6 py-4 text-left w-[18%]">AI Diagnostic</th>
+                            <th className="px-6 py-4 text-left w-[11%]">Clinic Status</th>
+                            <th className="px-6 py-4 text-left w-[11%]">Analysis Date</th>
+                            <th className="px-6 py-4 text-right w-[12%]">Actions</th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 text-left">
                         {filteredHistory.length > 0 ? (
                             filteredHistory.map((row) => (
-                                <tr key={row.id} className="group transition-colors hover:bg-gray-50/60">
+                                <tr key={row._id} className="group transition-colors hover:bg-gray-50/60">
                                     <td className="px-6 py-4">
-                                        <div className="w-10 h-10 bg-black rounded-lg"></div>
+                                        <div className="w-12 h-12 bg-black rounded-lg overflow-hidden border border-gray-100">
+                                            <img
+                                                src={`data:image/png;base64,${row.originalImageBase64}`}
+                                                alt="Preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4 font-bold text-gray-800 tracking-tight">{row.patient}</td>
+                                    {/* AFIȘARE NUME PACIENT REALE */}
+                                    <td className="px-6 py-4 font-bold text-gray-700 truncate">
+                                        {row.patientName || "Anonymous Patient"}
+                                    </td>
+                                    <td className="px-6 py-4 text-gray-500 font-medium tracking-tight truncate">{row.imageName}</td>
                                     <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${row.badgeColor}`}>
-                                                {row.result}
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getBadgeStyle(row.predictionLabel)}`}>
+                                                {row.predictionLabel} ({Math.round((row.confidence || 0) * 100)}%)
                                             </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {row.status ? (
-                                            <div className="flex items-center gap-1.5 text-teal-600 font-bold text-[10px] uppercase">
-                                                <CheckBadgeIcon className="w-4 h-4" /> Reviewed
-                                            </div>
+                                        {row.isReviewed ? (
+                                            <span className="text-teal-600 font-bold text-[10px] uppercase tracking-tight">Annotated</span>
                                         ) : (
-                                            <div className="flex items-center gap-1.5 text-amber-500 font-bold text-[10px] uppercase">
-                                                <ClockIcon className="w-4 h-4" /> Pending
-                                            </div>
+                                            <span className="text-amber-500 font-bold text-[10px] uppercase tracking-tight">Pending</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-gray-400 text-xs font-medium">
-                                        {row.date}
+                                        {new Date(row.createdAt).toLocaleDateString('en-GB')}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end items-center h-8">
-                                            <div className="hidden group-hover:flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                                            <div className="hidden group-hover:flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
                                                 <button
-                                                    onClick={() => navigate('/results')}
-                                                    className="text-[10px] font-black text-blue-600 px-3 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                                    onClick={() => navigate('/results', { state: { predictionData: row } })}
+                                                    className="text-[9px] font-black text-blue-600 px-2 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors uppercase"
                                                 >
-                                                    VIEW
+                                                    View
                                                 </button>
                                                 <button
-                                                    onClick={() => handleEditClick(row)}
-                                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+                                                    onClick={() => navigate('/patientHistory', { state: { targetPatientName: row.patientName || "Anonymous Patient" } })}
+                                                    className="text-[9px] font-black text-gray-600 px-2 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors uppercase"
                                                 >
-                                                    <PencilSquareIcon className="w-4 h-4" />
+                                                    History
                                                 </button>
                                             </div>
                                             <div className="group-hover:hidden">
@@ -233,66 +306,14 @@ const Dashboard = () => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className="px-6 py-12 text-center text-gray-400 text-xs italic tracking-wide">
-                                    No analysis records match your search criteria.
+                                <td colSpan="7" className="px-6 py-12 text-center text-gray-400 text-xs italic tracking-wide">
+                                    No analysis records found in MongoDB matching your criteria.
                                 </td>
                             </tr>
                         )}
                         </tbody>
                     </table>
                 </div>
-
-                {isEditModalOpen && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in duration-200 text-left">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold" style={{ color: styles.deepBlue }}>Update Record</h2>
-                                <button onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
-                                    <XMarkIcon className="w-5 h-5 text-gray-400" />
-                                </button>
-                            </div>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Patient Name</label>
-                                    <input
-                                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-100 focus:outline-none font-medium text-sm"
-                                        value={selectedRecord?.patient || ""}
-                                        onChange={(e) => setSelectedRecord({...selectedRecord, patient: e.target.value})}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Medical Review Status</label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setSelectedRecord({...selectedRecord, status: false})}
-                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${!selectedRecord?.status ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white border-gray-100 text-gray-400'}`}
-                                        >
-                                            Pending
-                                        </button>
-                                        <button
-                                            onClick={() => setSelectedRecord({...selectedRecord, status: true})}
-                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${selectedRecord?.status ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-white border-gray-100 text-gray-400'}`}
-                                        >
-                                            Reviewed
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-50">
-                                    <button onClick={() => setIsEditModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl bg-gray-50 text-gray-500 font-bold text-xs uppercase tracking-widest transition-colors hover:bg-gray-100">Cancel</button>
-                                    <button
-                                        onClick={handleSaveEdit}
-                                        className="flex-1 px-4 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:brightness-110 transition-all"
-                                        style={{ backgroundColor: styles.deepBlue }}
-                                    >
-                                        Save Changes
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );

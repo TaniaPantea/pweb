@@ -12,14 +12,26 @@ import Dashboard from "./pages/Dashboard.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import PatientHistory from "./pages/PatientHistory.jsx";
 import Navbar from "./components/Navbar.jsx";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // <--- Am adăugat useEffect
 
 function AppContent() {
     const location = useLocation();
-    const [userRole, setUserRole] = useState('admin');
+
+    // Citim rolul salvat în localStorage. Dacă nu există (utilizatorul e deconectat), punem un rol gol sau 'guest'
+    const [userRole, setUserRole] = useState(localStorage.getItem('user_role') || 'guest');
+
+    // Acest useEffect ascultă schimbările de rută și actualizează rolul în timp real.
+    // Este extrem de util imediat după ce utilizatorul apasă pe "Login" și este redirecționat!
+    useEffect(() => {
+        const currentRole = localStorage.getItem('user_role');
+        if (currentRole) {
+            setUserRole(currentRole);
+        } else {
+            setUserRole('guest');
+        }
+    }, [location]);
 
     const hideNavbarRoutes = ["/", "/login", "/register", "/about"];
-
     const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
 
     return (
@@ -33,9 +45,9 @@ function AppContent() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/results" element={<Results userRole={userRole} />} />
-                <Route path="/profile" element={<Profile userRole={userRole} />} />
+                <Route path="/profile" element={<Profile />} /> {/* Am scos userRole de aici pentru că Profile își ia singur datele acum */}
                 <Route path="/review" element={<Review userRole={userRole}/>} />
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard userRole={userRole} />} /> {/* Adăugat userRole opțional și aici dacă ai nevoie în Dashboard */}
                 <Route
                     path="/admin-dashboard"
                     element={<AdminDashboard userRole={userRole} />}

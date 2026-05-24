@@ -2,36 +2,69 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeftOnRectangleIcon, XMarkIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from "react-router-dom";
 
-const ProfileSettings = ({ userRole }) => {
+const ProfileSettings = () => {
     const primaryBlue = "#003178";
     const white = "#FFFFFF";
     const navigate = useNavigate();
 
+    // Formatăm vizual eticheta rolului pentru interfață
+    const getRoleLabel = (role) => {
+        if (role === 'admin') return "System Administrator";
+        if (role === 'doctor') return "Specialist Doctor";
+        return "Patient / User";
+    };
+
+    // Inițializăm starea direct cu datele reale din localStorage
     const [profile, setProfile] = useState({
-        email: userRole === 'admin'
-            ? "admin.retinaxai@hospital.org"
-            : userRole === 'doctor'
-                ? "dr.sarah.chen@hospital.org"
-                : "user.default@hospital.org",
-        role: userRole === 'admin'
-            ? "System Administrator"
-            : userRole === 'doctor'
-                ? "Specialist Doctor"
-                : "User"
+        name: localStorage.getItem('user_name') || "User",
+        email: localStorage.getItem('user_email') || "Loading...",
+        role: getRoleLabel(localStorage.getItem('user_role') || "patient")
     });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [tempEmail, setTempEmail] = useState(profile.email);
+
+    // Dacă utilizatorul dă refresh sau intră pe pagină, sincronizăm câmpurile text cu valorile stocate
+    // Înlocuiește vechiul useEffect cu acesta în ProfileSettings:
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('user_email');
+        const savedName = localStorage.getItem('user_name');
+        const savedRole = localStorage.getItem('user_role');
+
+        // Actualizăm profilul dinamic, păstrând starea anterioară pentru câmpurile care eventual lipsesc
+        setProfile(prevProfile => ({
+            name: savedName || prevProfile.name,
+            email: savedEmail || prevProfile.email,
+            role: savedRole ? getRoleLabel(savedRole) : prevProfile.role
+        }));
+
+        if (savedEmail) {
+            setTempEmail(savedEmail);
+        }
+    }, []);
 
     const gradientStyle = {
         background: "linear-gradient(135deg, #003178 0%, #0D47A1 100%)"
     };
 
     const handleSave = () => {
+        // Opțional: Aici poți face un fetch(PUT) către backend pentru a salva noul email și în MongoDB
+
+        // Actualizăm starea locală a componentei
         setProfile({ ...profile, email: tempEmail });
+
+        // Actualizăm stocarea locală pentru ca modificarea să persiste peste tot în aplicație
+        localStorage.setItem('user_email', tempEmail);
+
         setIsModalOpen(false);
     };
 
+    const handleLogout = () => {
+        // Ștergem absolut tot din sesiune ca să nu rămână date reziduale
+        localStorage.clear();
+        alert("You have been logged out successfully.");
+        navigate('/login');
+    };
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] font-['Inter'] text-[#455A64]">
@@ -44,7 +77,13 @@ const ProfileSettings = ({ userRole }) => {
                     </div>
 
                     <div className="p-12 space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Secțiune pentru Numele Utilizatorului din DB */}
+                        <div className="bg-[#F1F3F5] p-6 rounded-2xl text-left">
+                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Full Name</label>
+                            <p className="text-[#455A64] font-bold text-base">{profile.name}</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                             <div className="bg-[#F1F3F5] p-6 rounded-2xl">
                                 <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Email Address</label>
                                 <p className="text-[#455A64] font-semibold text-sm">{profile.email}</p>
@@ -68,7 +107,7 @@ const ProfileSettings = ({ userRole }) => {
                                 Update Profile
                             </button>
 
-                            <button onClick={() => navigate('/')} className="flex items-center gap-2 text-[#C64B4B] font-bold text-sm hover:opacity-80 transition-opacity uppercase tracking-widest text-[11px]">
+                            <button onClick={handleLogout} className="flex items-center gap-2 text-[#C64B4B] font-bold text-sm hover:opacity-80 transition-opacity uppercase tracking-widest text-[11px]">
                                 <ArrowLeftOnRectangleIcon className="w-5 h-5 stroke-[2.5]" />
                                 <span>logout</span>
                             </button>

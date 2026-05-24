@@ -12,6 +12,8 @@ const Upload = () => {
     const navigate = useNavigate();
     const [selectedImage, setSelectedImage] = useState(null);
     const fileInputRef = useRef(null);
+    const [loading, setLoading] = useState(false);
+    const [rawFile, setRawFile] = useState(null);
 
     const processFile = (file) => {
         if (file) {
@@ -20,6 +22,8 @@ const Upload = () => {
                 alert("Vă rugăm să încărcați doar formate JPG sau PNG.");
                 return;
             }
+
+            setRawFile(file);
 
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -51,7 +55,49 @@ const Upload = () => {
 
     const handleRemoveImage = () => {
         setSelectedImage(null);
+        setRawFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const handleAnalyze = async () => {
+        if (!rawFile) return;
+
+        setLoading(true);
+
+        // 1. Preluăm datele utilizatorului logat din localStorage
+        // Presupunem că la Login ai salvat obiectul complet sub cheia 'user_data' sau similar
+        const loggedInUser = JSON.parse(localStorage.getItem('user_data')) || {};
+
+        // 2. Construim obiectul FormData
+        const formData = new FormData();
+        formData.append('file', rawFile); // Fișierul imagine brut așteptat de server
+
+        // 3. MODIFICARE: Atașăm și datele de profil preluate din contul utilizatorului
+        formData.append('age', loggedInUser.age || 45);
+        formData.append('gender', loggedInUser.gender || 'Other');
+        formData.append('patientName', loggedInUser.name || 'Anonymous Patient');
+
+        try {
+            const response = await fetch('http://localhost:5000/api/analysis/predict', {
+                method: 'POST',
+                body: formData, // Tritem FormData (Setați manual Content-Type: multipart/form-data este omis intenționat, browserul îl pune singur)
+            });
+
+            if (!response.ok) {
+                throw new Error('Eroare la procesarea imaginii pe server.');
+            }
+
+            const data = await response.json();
+            console.log("Rezultat de la backend Node.js:", data);
+
+            // Noul Flow: Navigăm direct la pagina de rezultate transmițând datele primite în state
+            navigate('/results', { state: { predictionData: data } });
+
+        } catch (error) {
+            alert("Eroare la comunicarea cu serverul: " + error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -109,8 +155,7 @@ const Upload = () => {
                             onClick={() => fileInputRef.current.click()}
                             onDragOver={handleDragOver}
                             onDrop={handleDrop}
-                            className="border-2 border-dashed border-gray-200 rounded-[2.5rem] p-16 bg-white flex flex-col items-center justify-center text-center group cursor-pointer hover:border-[#003178] hover:bg-blue-50/30 transition-all"
-                            style={{ backgroundColor: '#F3F4F5' }}
+                            className="border-2 border-dashed border-gray-200 rounded-[2.5rem] p-16 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-[#003178] hover:bg-blue-50/30 transition-all bg-white"
                         >
                             <input
                                 type="file"
@@ -120,11 +165,11 @@ const Upload = () => {
                                 className="hidden"
                             />
 
-                            <CloudArrowUpIcon className="w-16 h-16 text-[#0D47A1] mb-6" />
+                            <CloudArrowUpIcon className="w-16 h-16 text-[#0D47A1] mb-6 animate-pulse" />
                             <h2 className="text-2xl font-bold text-[#0D47A1] mb-12 font-['Manrope'] max-w-xl mx-auto leading-tight text-center">
                                 {selectedImage ? "Image Selected Successfully" : "Drag & drop image here or Browse files"}
                             </h2>
-                            <button className="bg-[#E9ECEF] text-[#455A64] px-12 py-4 rounded-full font-bold text-sm font-['Inter'] hover:bg-[#DDE2E5] transition-colors shadow-sm">
+                            <button type="button" className="bg-[#E9ECEF] text-[#455A64] px-12 py-4 rounded-full font-bold text-sm font-['Inter'] hover:bg-[#DDE2E5] transition-colors shadow-sm">
                                 Select Retinal Scan
                             </button>
                         </div>
@@ -161,12 +206,13 @@ const Upload = () => {
                                     {selectedImage ? "Ready for Analysis" : "Select Image First"}
                                 </h3>
                                 <button
-                                    onClick={() => selectedImage && navigate('/results')}
-                                    disabled={!selectedImage}
-                                    className={`bg-white mt-12 w-full py-4 rounded-full font-extrabold text-xs font-['Manrope'] uppercase tracking-[0.1em] transition-all active:scale-[0.97] ${!selectedImage ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 shadow-lg'}`}
+                                    type="button"
+                                    onClick={handleAnalyze}
+                                    disabled={!selectedImage || loading}
+                                    className={`bg-white mt-12 w-full py-4 rounded-full font-extrabold text-xs font-['Manrope'] uppercase tracking-[0.1em] transition-all active:scale-[0.97] ${(!selectedImage || loading) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 shadow-lg'}`}
                                     style={{ color: primaryBlue }}
                                 >
-                                    Analyze Image
+                                    {loading ? "Analyzing..." : "Analyze Image"}
                                 </button>
                             </div>
                         </div>

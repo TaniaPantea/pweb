@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const LoginPage = () => {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -16,7 +17,7 @@ const LoginPage = () => {
         inputBg: '#E5E7EB',
     };
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
 
         if (formData.password.length < 6) {
@@ -24,11 +25,49 @@ const LoginPage = () => {
             return;
         }
 
-        navigate('/dashboard');
+        setLoading(true);
+
+        try {
+            const response = await fetch('http://localhost:5000/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Email sau parolă incorectă.");
+            }
+
+            // SALVARE METADATE ȘI ROL ÎN LOCALSTORAGE
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user_role', data.user.role);
+            localStorage.setItem('user_name', data.user.name);
+            localStorage.setItem('user_email', data.user.email);
+            localStorage.setItem('user_data', JSON.stringify(data.user));
+
+            alert(`Welcome back, ${data.user.name}!`);
+
+            // Direcționare inteligentă bazată pe tipul de cont
+            if (data.user.role === 'doctor') {
+                navigate('/dashboard'); // Medicii merg la panoul de control / statistici
+            } else {
+                navigate('/upload'); // Pacienții merg direct la încărcarea scanării
+            }
+
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
+
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-[#f3f4f6] p-6">
+        <div className="min-h-screen w-full flex items-center justify-center bg-[#f3f4f6] p-6 text-left">
             <div className="flex w-full max-w-[1000px] h-[600px] bg-white rounded-[30px] overflow-hidden shadow-2xl">
 
                 <div className="hidden lg:flex w-[45%] relative p-8 flex-col justify-between items-start">
@@ -51,7 +90,7 @@ const LoginPage = () => {
                     </div>
 
                     <div className="relative z-20 flex items-center justify-center w-full h-full px-10">
-                        <div className="w-[520px] text-left">
+                        <div className="w-[520px]">
                             <h2 style={{ color: "#ffffff", fontSize: "29px", fontWeight: "600", lineHeight: "1.2", fontFamily: "Manrope" }}>
                                 Advanced AI Diagnostic Support for Retinal Health.
                             </h2>
@@ -103,15 +142,17 @@ const LoginPage = () => {
 
                             <button
                                 type="submit"
+                                disabled={loading}
                                 className="w-full text-white py-3 rounded-full mt-4 flex items-center justify-center gap-2 hover:opacity-95 transition-all active:scale-[0.98]"
                                 style={{
                                     background: `linear-gradient(90deg, ${colors.primaryDark} 0%, ${colors.primary} 100%)`,
                                     fontFamily: "Manrope",
                                     fontSize: "14px",
-                                    fontWeight: "bold"
+                                    fontWeight: "bold",
+                                    opacity: loading ? 0.7 : 1
                                 }}
                             >
-                                Login <ArrowRightIcon size={16} />
+                                {loading ? "Verifying..." : "Login"} <ArrowRightIcon size={16} />
                             </button>
                         </form>
 
